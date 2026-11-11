@@ -70,11 +70,19 @@ Der Paketbau umfasst derzeit nur Macs mit Apple-Chip (M1 und neuer).
 Voraussetzung: Python 3.10+ und die Web-Engine des Systems, z. B. ab Ubuntu 22.04,
 Debian 12, Fedora 36, Linux Mint 21.
 
-```bash
-# 1. Systempakete (einmalig; Fedora/Arch/openSUSE: siehe Meldung von install.sh)
-sudo apt install python3-venv python3-gi gir1.2-webkit2-4.1 pandoc
+**1. Systempakete** (einmalig, mit `sudo`; `pandoc` nur für MediaWiki-Dateien):
 
-# 2. Paket aus den GitHub-Releases entpacken und installieren (ohne Root-Rechte)
+| Distribution  | Befehl |
+|---------------|--------|
+| Debian/Ubuntu | `sudo apt install python3 python3-venv python3-gi gir1.2-webkit2-4.1 pandoc` |
+| Fedora        | `sudo dnf install python3 python3-gobject webkit2gtk4.1 pandoc` |
+| Arch/Manjaro  | `sudo pacman -S python python-gobject webkit2gtk-4.1 pandoc` |
+| openSUSE      | `sudo zypper install python3 python3-gobject python3-gobject-Gdk typelib-1_0-WebKit2-4_1 pandoc` |
+
+**2. Paket** aus den GitHub-Releases entpacken und installieren, **ohne `sudo`**
+(installiert nur für den aktuellen Benutzer; als root bricht `install.sh` ab):
+
+```bash
 tar xzf kimbaview-<version>-linux.tar.gz
 cd kimbaview-<version>-linux
 ./install.sh
@@ -86,6 +94,8 @@ vorher alle Voraussetzungen und nennt bei Bedarf den passenden Installationsbefe
 Debian/Ubuntu, Fedora, Arch und openSUSE.
 
 Die Pakete für alle drei Systeme baut eine GitHub-Pipeline (`.github/workflows/build.yml`).
+Das Linux-Paket wird dabei auf Ubuntu 22.04, openSUSE Tumbleweed und openSUSE Leap 16
+probeweise installiert.
 
 ---
 
@@ -108,7 +118,7 @@ eine Meldung mit Installationshinweis.
 |---------|--------|
 | Windows | `winget install --id JohnMacFarlane.Pandoc` |
 | macOS   | `brew install pandoc` |
-| Linux   | `sudo apt install pandoc` · `sudo dnf install pandoc` · `sudo pacman -S pandoc` |
+| Linux   | `sudo apt install pandoc` · `sudo dnf install pandoc` · `sudo pacman -S pandoc` · `sudo zypper install pandoc` |
 
 kimbaview sucht Pandoc im `PATH` und zusätzlich an den üblichen Orten
 (`%LOCALAPPDATA%\Pandoc`, `C:\Program Files\Pandoc`, `/opt/homebrew/bin`, `/usr/local/bin`,
@@ -397,6 +407,12 @@ unbekannten Quellen mit der gleichen Vorsicht wie bei anderen Programmen.
 * **Überwacht wird das Verzeichnis**, nicht die Datei (atomares Speichern). Ist die
   geöffnete Datei ein Symlink, werden Änderungen am Link-Namen erkannt, nicht an einem
   Ziel in einem anderen Ordner.
+* **Neu geladen wird nur bei echter Änderung:** Der Watcher merkt sich, ob die Datei
+  existiert, und einen Hash ihres Inhalts. Ereignisse ohne Änderung (z. B. verspätete
+  FSEvents unter macOS oder Änderungen an anderen Dateien im Ordner) lösen nichts aus.
+* **Tabellenzellen aus Pandoc:** Neuere Pandoc-Versionen packen jeden Zelleninhalt in
+  `<p>`. Besteht eine Zelle aus genau einem Absatz, entfernt kimbaview ihn wieder, damit
+  Tabellen mit allen Pandoc-Versionen gleich aussehen.
 
 ---
 
@@ -411,13 +427,14 @@ Alle Tests laufen **ohne Grafikdisplay**:
 
 * `test_formats.py`: Erkennung per Endung und `--format`
 * `test_render.py`: beide Formate (Überschriften, Listen, Tabellen, Code, Links,
-  Fußnoten, Task-Listen, Vorlagen-Platzhalter, lokale Bilder)
+  Fußnoten, Task-Listen, Vorlagen-Platzhalter, lokale Bilder, Absätze in Tabellenzellen)
 * `test_security.py`: `<script>`, Event-Handler, `javascript:`-/`data:`-/`file:`-Links,
   gefährliche Tags, Path Traversal, Symlinks/Junctions nach außen, Dateigröße,
   ungültiges UTF-8, Pandoc-Aufruf (keine Shell, Minimal-Argumente, Zeitlimit,
   fehlendes Pandoc), CSP, `webbrowser`-Absicherung, `evil.md`
 * `test_watcher.py`: Änderung, atomares Speichern, Löschen/Wiederherstellen,
-  Umbenennen, Entprellung, unabhängige Watcher, Ende-zu-Ende mit Controller
+  Umbenennen, Entprellung, unabhängige Watcher, Ereignisse ohne Inhaltsänderung,
+  Ende-zu-Ende mit Controller
 * `test_controller.py`: Fehlerverhalten (letzter Stand bleibt, nie abstürzen)
 * `test_navigation.py`: Links zwischen Dokumenten (Unterordner, `../`, Anker,
   Wiki-Links ohne Endung), Ablehnung von Zielen außerhalb, Symlinks/Junctions,
@@ -503,7 +520,8 @@ src/kimbaview/
   i18n.py              Texte der Oberfläche auf Englisch und Deutsch
   assets/style.css, assets/viewer.js, assets/kimbaview.ico|png
 packaging/             Windows (PyInstaller, Registry), macOS (py2app), Linux (.desktop),
-                       icon/ (Zeichenskripte für das Programm-Icon)
+                       icon/ (Zeichenskripte für das Programm-Icon),
+                       licenses/ (ergänzende Lizenztexte für THIRD-PARTY-LICENSES.txt)
 examples/              example.md, example.mediawiki, evil.md, bilder/
 docs/                  Bilder der Anleitung (Icon, Screenshots)
 tests/
