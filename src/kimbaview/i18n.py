@@ -172,9 +172,9 @@ MESSAGES: dict[str, dict[str, str]] = {
     },
     "pandoc.how_linux": {
         "en": "Install on Linux, e.g.:  sudo apt install pandoc   |   sudo dnf install pandoc"
-              "   |   sudo pacman -S pandoc",
+              "   |   sudo pacman -S pandoc   |   sudo zypper install pandoc",
         "de": "Installation unter Linux, z. B.:  sudo apt install pandoc   |   sudo dnf install pandoc"
-              "   |   sudo pacman -S pandoc",
+              "   |   sudo pacman -S pandoc   |   sudo zypper install pandoc",
     },
     "pandoc.timeout": {
         "en": "Pandoc exceeded the time limit of {timeout:g} s and was stopped.",

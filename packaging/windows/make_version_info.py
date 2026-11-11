@@ -34,4 +34,4 @@ VSVersionInfo(
 """
 
 Path(sys.argv[1]).write_text(TEMPLATE, encoding="utf-8")
-print(f"Versionsressource {__version__} → {sys.argv[1]}")
+print(f"Versionsressource {__version__} -> {sys.argv[1]}")

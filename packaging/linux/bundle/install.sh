@@ -33,7 +33,7 @@ hint_packages() {
     printf '%s\n' "  Debian/Ubuntu:  sudo apt install python3 python3-venv python3-gi gir1.2-webkit2-4.1"
     printf '%s\n' "  Fedora:         sudo dnf install python3 python3-gobject webkit2gtk4.1"
     printf '%s\n' "  Arch/Manjaro:   sudo pacman -S python python-gobject webkit2gtk-4.1"
-    printf '%s\n' "  openSUSE:       sudo zypper install python3 python3-gobject typelib-1_0-WebKit2-4_1"
+    printf '%s\n' "  openSUSE:       sudo zypper install python3 python3-gobject python3-gobject-Gdk typelib-1_0-WebKit2-4_1"
     msg "Optional for MediaWiki files: pandoc (same package manager)." \
         "Optional für MediaWiki-Dateien: pandoc (gleicher Paketmanager)."
 }

@@ -12,6 +12,8 @@ param(
     [string]$Python = ''
 )
 $ErrorActionPreference = 'Stop'
+# Python-Ausgaben als UTF-8 (sonst cp1252 auf dem CI-Runner -> UnicodeEncodeError)
+$env:PYTHONUTF8 = '1'
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $root = Resolve-Path (Join-Path $here '..\..')
 if (-not $Python) { $Python = Join-Path $root '.venv\Scripts\python.exe' }
