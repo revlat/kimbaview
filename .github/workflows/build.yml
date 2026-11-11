@@ -1,0 +1,238 @@
+# kimbaview – Tests, Builds und Releases für Windows, macOS und Linux
+#
+# • Jeder Push / Pull Request: Tests auf allen drei Systemen + Probe-Builds
+# • Tag "v1.2.3" pushen: zusätzlich GitHub-Release mit allen Paketen + SHA256SUMS
+# • Manuell startbar unter Actions → "Build" → "Run workflow"
+#
+# Signieren ist optional und schaltet sich automatisch ein, sobald die Secrets
+# im Repository hinterlegt sind. Ohne Secrets wird unsigniert gebaut.
+
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ------------------------------------------------------------------ Tests
+  test:
+    name: Tests (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Pandoc installieren (für die MediaWiki-Tests)
+        shell: bash
+        run: |
+          case "$RUNNER_OS" in
+            Linux)   sudo apt-get update -q && sudo apt-get install -y -q pandoc ;;
+            macOS)   brew install pandoc ;;
+            Windows) choco install pandoc --no-progress -y ;;
+          esac
+      - run: python -m pip install -e ".[dev]"
+      - run: python -m pytest -q
+
+  # ------------------------------------------------------------------ Windows
+  windows:
+    name: Windows-Installer
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build-Umgebung
+        run: |
+          python -m venv .venv
+          .venv\Scripts\python -m pip install --upgrade pip
+          .venv\Scripts\python -m pip install -e ".[build]"
+      - name: Inno Setup bereitstellen
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup --no-progress -y }
+      - name: Programm bauen (PyInstaller)
+        run: powershell -ExecutionPolicy Bypass -File packaging\windows\build.ps1
+      - name: Selbsttest der gebauten exe
+        run: |
+          $p = Start-Process dist\kimbaview\kimbaview.exe -ArgumentList '--selftest' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "Selbsttest fehlgeschlagen (Code $($p.ExitCode))" }
+
+      # --- Optional: Windows-Signierung -------------------------------------------
+      # Der private Schlüssel liegt NIE im Repository, sondern beim Signierdienst.
+      # Beispiel Azure Trusted Signing (Werte als Secrets anlegen, Block einkommentieren,
+      # Version der Action vorher auf github.com/Azure/trusted-signing-action prüfen):
+      #
+      # - name: exe signieren
+      #   uses: azure/trusted-signing-action@v0
+      #   with:
+      #     azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+      #     azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+      #     azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+      #     endpoint: ${{ secrets.AZURE_SIGNING_ENDPOINT }}
+      #     trusted-signing-account-name: ${{ secrets.AZURE_SIGNING_ACCOUNT }}
+      #     certificate-profile-name: ${{ secrets.AZURE_SIGNING_PROFILE }}
+      #     files-folder: dist\kimbaview
+      #     files-folder-filter: exe
+      #     file-digest: SHA256
+      #     timestamp-rfc3161: http://timestamp.acs.microsoft.com
+      #     timestamp-digest: SHA256
+      # ------------------------------------------------------------------------------
+
+      - name: Installer bauen (Inno Setup)
+        run: powershell -ExecutionPolicy Bypass -File packaging\windows\build-installer.ps1 -SkipBuild
+
+      # (bei Signierung hier denselben Schritt noch einmal für dist\installer einfügen)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: dist/installer/*.exe
+          if-no-files-found: error
+
+  # ------------------------------------------------------------------ macOS
+  macos:
+    name: macOS-App (DMG)
+    needs: test
+    runs-on: macos-latest      # Apple Silicon (arm64)
+    env:
+      HAS_SIGNING: ${{ secrets.MACOS_CERT_P12 != '' }}
+      HAS_NOTARY: ${{ secrets.MACOS_NOTARY_KEY != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build-Umgebung
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/python -m pip install . py2app
+
+      - name: Zertifikat in temporären Schlüsselbund laden (nur mit Secrets)
+        if: env.HAS_SIGNING == 'true'
+        env:
+          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+        run: |
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+          KC_PW="$(uuidgen)"
+          echo "$MACOS_CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$KC_PW" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KC_PW" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/cert.p12" -P "$MACOS_CERT_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KC_PW" "$KEYCHAIN"
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          rm -f "$RUNNER_TEMP/cert.p12"
+
+      - name: Notarisierungs-Schlüssel bereitstellen (nur mit Secrets)
+        if: env.HAS_NOTARY == 'true'
+        env:
+          MACOS_NOTARY_KEY: ${{ secrets.MACOS_NOTARY_KEY }}
+        run: |
+          echo "$MACOS_NOTARY_KEY" | base64 --decode > "$RUNNER_TEMP/notary.p8"
+          echo "MACOS_NOTARY_KEY_PATH=$RUNNER_TEMP/notary.p8" >> "$GITHUB_ENV"
+
+      - name: App und DMG bauen
+        env:
+          PYTHON: .venv/bin/python
+          MACOS_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
+          MACOS_NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
+          MACOS_NOTARY_ISSUER: ${{ secrets.MACOS_NOTARY_ISSUER }}
+        run: sh packaging/macos/build-dmg.sh
+
+      - name: Aufräumen
+        if: always()
+        run: |
+          rm -f "$RUNNER_TEMP/notary.p8"
+          security delete-keychain "$RUNNER_TEMP/signing.keychain-db" 2>/dev/null || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: dist/*.dmg
+          if-no-files-found: error
+
+  # ------------------------------------------------------------------ Linux
+  linux:
+    name: Linux-Paket
+    needs: test
+    runs-on: ubuntu-22.04      # ältere Basis → läuft auf mehr Distributionen
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"   # älteste unterstützte Version (Wheels laufen auch mit neueren)
+      - name: Paket bauen
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install .
+          sh packaging/linux/build-bundle.sh python
+      - name: Installation wie beim Nutzer testen (System-Python + WebKitGTK)
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q python3-venv python3-gi gir1.2-webkit2-4.1 desktop-file-utils
+          desktop-file-validate packaging/linux/kimbaview.desktop
+          mkdir -p "$RUNNER_TEMP/try" && tar -C "$RUNNER_TEMP/try" -xzf dist/kimbaview-*-linux.tar.gz
+          cd "$RUNNER_TEMP"/try/kimbaview-*-linux
+          PYTHON=/usr/bin/python3 ./install.sh
+          "$HOME/.local/bin/kimbaview" --selftest
+          test -f "$HOME/.local/share/applications/kimbaview.desktop"
+          ./uninstall.sh
+          test ! -e "$HOME/.local/bin/kimbaview"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: dist/*.tar.gz
+          if-no-files-found: error
+
+  # ------------------------------------------------------------------ Release
+  release:
+    name: GitHub-Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows, macos, linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write        # Release anlegen
+      id-token: write        # Herkunftsnachweis (Attestation)
+      attestations: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Version prüfen (Tag muss zu kimbaview.__version__ passen)
+        run: |
+          V=$(python3 -c 'import sys; sys.path.insert(0, "src"); import kimbaview; print(kimbaview.__version__)')
+          test "v$V" = "$GITHUB_REF_NAME" || { echo "Tag $GITHUB_REF_NAME passt nicht zu Version $V"; exit 1; }
+      - uses: actions/download-artifact@v4
+        with:
+          path: release
+          merge-multiple: true
+      - name: Prüfsummen
+        run: cd release && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
+      - name: Herkunftsnachweis erzeugen
+        uses: actions/attest-build-provenance@v2
+        continue-on-error: true   # bei privaten Repos ohne passenden Plan nicht verfügbar
+        with:
+          subject-path: "release/*"
+      - name: Release veröffentlichen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" release/* \
+            --title "kimbaview ${GITHUB_REF_NAME#v}" \
+            --notes-file .github/release-notes.md

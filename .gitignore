@@ -1,0 +1,22 @@
+# Python-Umgebung und Caches
+.venv/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+
+# Build-Ergebnisse
+build/
+dist/
+
+# Nur lokal: Notizen zu Releases/Signierung und Icon-Entwürfe
+# (das Programm-Icon entsteht aus packaging/icon/ über packaging/make_icons.py)
+RELEASE.md
+icons/
+
+# System- und Editordateien
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/
+*.log

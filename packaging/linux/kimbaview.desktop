@@ -1,0 +1,16 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=kimbaview
+GenericName=Markdown and MediaWiki viewer
+GenericName[de]=Markdown- und MediaWiki-Betrachter
+Comment=Displays Markdown and MediaWiki files and updates them live
+Comment[de]=Zeigt Markdown- und MediaWiki-Dateien gerendert an und aktualisiert sie live
+Exec=kimbaview %f
+Icon=kimbaview
+Terminal=false
+Categories=Utility;TextTools;Viewer;
+MimeType=text/markdown;text/x-markdown;text/x-mediawiki;
+Keywords=markdown;mediawiki;wiki;viewer;
+Keywords[de]=markdown;mediawiki;wiki;betrachter;anzeige;
+StartupNotify=true

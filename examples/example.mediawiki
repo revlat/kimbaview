@@ -1,0 +1,45 @@
+{{Infobox Software
+| Name = kimbaview
+| Lizenz = MIT
+}}
+
+= kimbaview – MediaWiki-Beispiel =
+
+Dies ist ein '''Beispieldokument''' im ''MediaWiki''-Format. Es enthält einen
+[https://www.mediawiki.org externen Link], einen [[Interner Link|internen Link]]
+(öffnet <code>Interner Link.wiki</code> o. Ä., falls vorhanden), einen Link auf eine
+[[unterordner/seite.md|Markdown-Seite im Unterordner]] und eine Vorlage im Fließtext:
+{{Datum|2026|11|11}}.
+
+== Listen ==
+
+* Erster Punkt
+* Zweiter Punkt
+** Unterpunkt
+* Dritter Punkt
+
+# Schritt eins
+# Schritt zwei
+
+== Tabelle ==
+
+{| class="wikitable"
+! Format !! Endungen !! Renderer
+|-
+| Markdown || .md, .markdown || markdown-it-py
+|-
+| MediaWiki || .mediawiki, .wiki || Pandoc
+|}
+
+== Code ==
+
+<syntaxhighlight lang="python">
+def gruss(name):
+    return "Hallo, " + name + "!"
+</syntaxhighlight>
+
+Vorlagen in <code>nowiki</code> bleiben Text: <nowiki>{{KeineVorlage}}</nowiki>
+
+== Bild ==
+
+[[Datei:bilder/beispiel.png|Beispielgrafik]]
