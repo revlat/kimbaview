@@ -8,6 +8,7 @@ Aufruf:  python packaging/collect_licenses.py <ausgabedatei>
 from __future__ import annotations
 
 import sys
+import sysconfig
 from importlib.metadata import PackageNotFoundError, distribution, requires
 from pathlib import Path
 
@@ -43,6 +44,24 @@ def runtime_dists() -> list[str]:
     return sorted(k for k in seen if k not in SKIP)
 
 
+# Ergänzungen für Inhalte, deren Lizenztext nicht in den Paketmetadaten steckt.
+EXTRA = Path(__file__).resolve().parent / "licenses"
+
+
+def supplements(name: str) -> list[tuple[str, str]]:
+    """Zusätzliche Lizenztexte zu einem Paket aus packaging/licenses/."""
+    out: list[tuple[str, str]] = []
+    if name == "proxy-tools":
+        out.append(("proxy-tools-NOTICE.txt", (EXTRA / "proxy-tools-NOTICE.txt").read_text(encoding="utf-8")))
+    if name == "pywebview":
+        # pywebview liefert die WebView2-DLLs von Microsoft mit (Windows-Backend).
+        lib = Path(distribution(name).locate_file("webview/lib"))
+        if any(lib.rglob("*WebView2*.dll")):
+            for f in ("WebView2-LICENSE.txt", "WebView2-NOTICE.txt"):
+                out.append((f"Microsoft WebView2 SDK – {f}", (EXTRA / f).read_text(encoding="utf-8")))
+    return out
+
+
 def license_texts(name: str) -> tuple[str, str, list[tuple[str, str]]]:
     dist = distribution(name)
     meta = dist.metadata
@@ -61,11 +80,14 @@ def license_texts(name: str) -> tuple[str, str, list[tuple[str, str]]]:
                 texts.append((Path(s).name, Path(dist.locate_file(f)).read_text(encoding="utf-8", errors="replace")))
             except OSError:
                 pass
+    texts += supplements(name.lower().replace("_", "-"))
     return dist.version, lic or "siehe Paket", texts
 
 
 def python_license() -> str | None:
-    for cand in (Path(sys.base_prefix) / "LICENSE.txt", Path(sys.base_prefix) / "LICENSE"):
+    stdlib = Path(sysconfig.get_paths()["stdlib"])  # macOS/Linux: lib/pythonX.Y/LICENSE.txt
+    for cand in (Path(sys.base_prefix) / "LICENSE.txt", Path(sys.base_prefix) / "LICENSE",
+                 stdlib / "LICENSE.txt"):
         if cand.is_file():
             return cand.read_text(encoding="utf-8", errors="replace")
     return None

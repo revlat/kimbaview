@@ -6,7 +6,7 @@
 ; gewählt werden (dann mit Adminrechten nach C:\Program Files).
 
 #ifndef AppVersion
-  #define AppVersion "1.0.1"
+  #define AppVersion "1.0.2"
 #endif
 #define AppName "kimbaview"
 #define AppPublisher "revlat"

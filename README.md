@@ -27,7 +27,7 @@ kimbaview            # without a file: file selection dialog
 
 **With the installer (recommended):**
 
-1. Run `kimbaview-setup-1.0.1.exe`. The default is "just for me", without admin
+1. Run `kimbaview-setup-1.0.2.exe`. The default is "just for me", without admin
    rights, to `%LOCALAPPDATA%\Programs\kimbaview`.
 2. In the wizard, keep the option **"Offer in the context menu under 'Open with'"**
    checked; optionally create a desktop shortcut.
@@ -439,7 +439,9 @@ liable for any claim, damages or other liability arising from the software or it
 **Third-party components:** the built programs contain Python and several libraries
 under permissive licenses: pywebview, Pygments, pycparser (BSD); markdown-it-py,
 mdit-py-plugins, mdurl, nh3, pythonnet, clr-loader, bottle, proxy-tools, cffi (MIT or
-MIT-0); watchdog (Apache-2.0); Python, typing-extensions (PSF). The build scripts
+MIT-0); on macOS also PyObjC (MIT); watchdog (Apache-2.0); Python, typing-extensions
+(PSF); on Windows the Microsoft WebView2 SDK libraries shipped with pywebview
+(BSD-style license from Microsoft). The build scripts
 automatically create `THIRD-PARTY-LICENSES.txt` with all license texts and place it,
 together with `LICENSE.txt`, next to the `.exe` or in `kimbaview.app/Contents/Resources`.
 Always include these files when distributing. Pandoc (GPL) is **not** included but only
