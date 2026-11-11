@@ -132,3 +132,18 @@ def test_template_name_is_escaped():
 def test_examples_render(examples, fmt):
     out = render_document((examples / "example.md").read_text("utf-8"), fmt, examples)
     assert "<h1" in out and "<table>" in out and "data:image/png" in out
+
+
+def test_wiki_cell_paragraphs_unwrapped():
+    # Pandoc ≥ 3.x schreibt <td><p>1</p></td>; einzelne Absätze werden entfernt.
+    from kimbaview.render_mediawiki import _unwrap_cell_paragraphs
+
+    src = (
+        '<tr><th><p>A</p></th><td style="text-align: left;"><p>1 <b>x</b></p></td>'
+        "<td><p>a</p>\n<p>b</p></td><td>ohne</td></tr>"
+    )
+    out = _unwrap_cell_paragraphs(src)
+    assert "<th>A</th>" in out
+    assert '<td style="text-align: left;">1 <b>x</b></td>' in out
+    assert "<td><p>a</p>\n<p>b</p></td>" in out  # mehrere Absätze bleiben
+    assert "<td>ohne</td>" in out

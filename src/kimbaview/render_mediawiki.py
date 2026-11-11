@@ -235,8 +235,20 @@ def _highlight_blocks(html: str) -> str:
     return _PANDOC_CODE_RE.sub(repl, html)
 
 
+# Neuere Pandoc-Versionen packen jeden Zelleninhalt in <p>. Besteht eine Zelle aus genau
+# einem Absatz, entfernen wir ihn wieder – so sieht die Ausgabe mit allen Versionen gleich aus.
+_CELL_SINGLE_P_RE = re.compile(
+    r"<(t[hd])((?:\s[^>]*)?)><p>((?:(?!</?p[\s>]).)*?)</p></\1>", re.DOTALL
+)
+
+
+def _unwrap_cell_paragraphs(html: str) -> str:
+    return _CELL_SINGLE_P_RE.sub(r"<\1\2>\3</\1>", html)
+
+
 def render_mediawiki(text: str, pandoc: str | None = None, timeout: float = PANDOC_TIMEOUT) -> str:
     protected, mapping = protect_templates(text)
     html = run_pandoc(protected, pandoc=pandoc, timeout=timeout)
+    html = _unwrap_cell_paragraphs(html)
     html = _highlight_blocks(html)
     return restore_templates(html, mapping)

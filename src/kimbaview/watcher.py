@@ -4,11 +4,15 @@
 Editoren atomar speichern: Sie schreiben eine temporäre Datei und benennen
 sie anschließend um. Eine Überwachung nur der Datei würde das verpassen.
 Ereignisse werden entprellt (Standard 200 ms); danach wird der Callback
-mit ``exists`` (bool) aufgerufen.
+mit ``exists`` (bool) aufgerufen – aber nur, wenn sich der Dateistand
+(vorhanden + Inhalt) seit dem letzten Aufruf tatsächlich geändert hat.
+Das filtert Phantom-Ereignisse heraus, z. B. verspätet zugestellte
+FSEvents unter macOS für Schreibvorgänge vor dem Start der Überwachung.
 """
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
 import threading
@@ -22,6 +26,19 @@ log = logging.getLogger(__name__)
 
 DEBOUNCE_SECONDS = 0.2
 OBSERVER_TIMEOUT = 0.1
+
+
+_State = tuple[bool, bytes | None]
+
+
+def _file_state(path: Path) -> _State:
+    """(existiert, Inhalts-Hash). Hash ``None``, wenn die Datei nicht lesbar ist."""
+    if not path.is_file():
+        return (False, None)
+    try:
+        return (True, hashlib.blake2b(path.read_bytes(), digest_size=16).digest())
+    except OSError:
+        return (True, None)
 
 
 def _key(path: str | os.PathLike[str] | bytes) -> str:
@@ -45,9 +62,11 @@ class FileWatcher:
         self._lock = threading.Lock()
         self._observer: Observer | None = None
         self._stopped = False
+        self._state: _State | None = None
 
     # ---------------------------------------------------------------- Lebenszyklus
     def start(self) -> None:
+        self._state = _file_state(self.path)
         handler = _Handler(self)
         # watchdog sammelt Ereignisse, bis `timeout` Sekunden Ruhe herrscht (Standard 1 s,
         # unter Windows deutlich spürbar). Unsere eigene Entprellung übernimmt das Bündeln.
@@ -98,8 +117,15 @@ class FileWatcher:
             if self._stopped:
                 return
             self._timer = None
+        state = _file_state(self.path)
+        exists, digest = state
+        # Unverändert → nichts melden. Vorhanden, aber unlesbar (z. B. unter Windows
+        # gerade gesperrt) → sicherheitshalber trotzdem melden.
+        if state == self._state and (digest is not None or not exists):
+            return
+        self._state = state
         try:
-            self._callback(self.path.is_file())
+            self._callback(exists)
         except Exception:
             log.exception("Fehler im Datei-Callback")
 

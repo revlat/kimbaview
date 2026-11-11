@@ -7,7 +7,7 @@ import time
 import pytest
 
 from kimbaview.controller import DocumentController
-from kimbaview.watcher import FileWatcher
+from kimbaview.watcher import FileWatcher, _file_state
 
 TIMEOUT = 5.0
 
@@ -155,3 +155,21 @@ def test_controller_with_watcher_end_to_end(tmp_path):
         assert pushed[-1].get("notice", "x") is None  # Hinweis wieder weg
     finally:
         w.stop()
+
+
+def test_event_without_content_change_ignored(tmp_path):
+    # Phantom-Ereignisse (z. B. verspätete FSEvents unter macOS) lösen keinen Callback aus.
+    f = tmp_path / "doc.md"
+    f.write_text("# eins", encoding="utf-8")
+    rec = Recorder()
+    w = FileWatcher(f, rec, debounce=0.01)
+    w._state = _file_state(f)
+    w._fire()
+    assert rec.calls == []
+    f.write_text("# zwei", encoding="utf-8")
+    w._fire()
+    assert rec.calls == [True]
+    f.unlink()
+    w._fire()
+    w._fire()
+    assert rec.calls == [True, False]
