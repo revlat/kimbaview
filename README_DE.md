@@ -1,6 +1,6 @@
 # <img src="docs/kimbaview-icon.png" width="64" height="64" alt=""> kimbaview
 
-[English](README.md) · **Deutsch**
+🇬🇧 [English](README.md) | 🇩🇪 [Deutsch](README_DE.md)
 
 *von revlat · MIT-Lizenz*
 

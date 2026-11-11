@@ -39,7 +39,7 @@ try {
     # Lizenzen beilegen (eigene MIT-Lizenz + Texte aller gebündelten Pakete)
     Copy-Item (Join-Path $root 'LICENSE') (Join-Path $root 'dist\kimbaview\LICENSE.txt') -Force
     Copy-Item (Join-Path $root 'README.md') (Join-Path $root 'dist\kimbaview\README.md') -Force
-    Copy-Item (Join-Path $root 'README.de.md') (Join-Path $root 'dist\kimbaview\README.de.md') -Force
+    Copy-Item (Join-Path $root 'README_DE.md') (Join-Path $root 'dist\kimbaview\README_DE.md') -Force
     # Bilder der Anleitung (Icon, Screenshot)
     Copy-Item (Join-Path $root 'docs') (Join-Path $root 'dist\kimbaview\docs') -Recurse -Force
     & $Python (Join-Path $root 'packaging\collect_licenses.py') (Join-Path $root 'dist\kimbaview\THIRD-PARTY-LICENSES.txt')

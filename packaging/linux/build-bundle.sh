@@ -24,7 +24,7 @@ cp packaging/linux/install.sh packaging/linux/uninstall.sh \
    packaging/linux/kimbaview.png "$OUT/desktop/"
 chmod 755 "$OUT/install.sh" "$OUT/uninstall.sh" "$OUT/desktop/install.sh" "$OUT/desktop/uninstall.sh"
 cp LICENSE "$OUT/LICENSE.txt"
-cp README.md README.de.md "$OUT/"
+cp README.md README_DE.md "$OUT/"
 cp -R docs "$OUT/docs"
 "$PY" packaging/collect_licenses.py "$OUT/THIRD-PARTY-LICENSES.txt"
 
