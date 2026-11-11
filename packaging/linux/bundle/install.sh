@@ -38,6 +38,13 @@ hint_packages() {
         "Optional für MediaWiki-Dateien: pandoc (gleicher Paketmanager)."
 }
 
+# 0) Nicht als root: sonst landet alles unter /root und fehlt im Startmenü des Benutzers.
+#    Ausnahme (z. B. Container ohne normalen Benutzer): KIMBAVIEW_ALLOW_ROOT=1
+if [ "$(id -u)" = 0 ] && [ "${KIMBAVIEW_ALLOW_ROOT:-}" != 1 ]; then
+    fail "Please run ./install.sh WITHOUT sudo – it installs for your user only. Only the system packages need sudo." \
+         "Bitte ./install.sh OHNE sudo starten – es installiert nur für deinen Benutzer. Nur die Systempakete brauchen sudo."
+fi
+
 # 1) Voraussetzungen prüfen
 command -v "$PY" >/dev/null 2>&1 || { hint_packages; fail "Python 3 ($PY) not found." "Python 3 ($PY) nicht gefunden."; }
 if ! "$PY" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)'; then

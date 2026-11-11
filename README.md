@@ -27,7 +27,7 @@ kimbaview            # without a file: file selection dialog
 
 **With the installer (recommended):**
 
-1. Run `kimbaview-setup-1.0.0.exe`. The default is "just for me", without admin
+1. Run `kimbaview-setup-1.0.1.exe`. The default is "just for me", without admin
    rights, to `%LOCALAPPDATA%\Programs\kimbaview`.
 2. In the wizard, keep the option **"Offer in the context menu under 'Open with'"**
    checked; optionally create a desktop shortcut.

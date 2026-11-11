@@ -27,7 +27,7 @@ kimbaview            # ohne Datei: Dateiauswahl-Dialog
 
 **Mit Installer (empfohlen):**
 
-1. `kimbaview-setup-1.0.0.exe` ausführen. Standard ist „nur für mich“, ohne
+1. `kimbaview-setup-1.0.1.exe` ausführen. Standard ist „nur für mich“, ohne
    Adminrechte, nach `%LOCALAPPDATA%\Programs\kimbaview`.
 2. Im Assistenten die Option **„Im Kontextmenü unter ‚Öffnen mit‘ anbieten“**
    angehakt lassen; optional eine Desktop-Verknüpfung.
